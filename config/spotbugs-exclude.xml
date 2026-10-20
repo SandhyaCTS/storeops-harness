@@ -1,0 +1,6 @@
+<FindBugsFilter>
+  <!-- Records and Spring-managed singletons intentionally share references. -->
+  <Match>
+    <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+  </Match>
+</FindBugsFilter>
