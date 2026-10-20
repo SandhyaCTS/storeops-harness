@@ -3,6 +3,7 @@ package com.storeops.programmes;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.stereotype.Repository;
 
@@ -19,5 +20,9 @@ class ProgrammeRepository {
 
     List<Programme> findAll() {
         return new ArrayList<>(store.values());
+    }
+
+    Optional<Programme> findById(String id) {
+        return Optional.ofNullable(store.get(id));
     }
 }

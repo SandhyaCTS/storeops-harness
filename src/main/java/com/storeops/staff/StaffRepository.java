@@ -14,9 +14,9 @@ class StaffRepository {
     private final Map<String, Staff> store = new ConcurrentHashMap<>();
 
     StaffRepository() {
-        save(new Staff("s1", "Alice Rivera", "store-1", "MANAGER"));
+        save(new Staff("s1", "Alice Rivera", "store-1", "STORE_MANAGER"));
         save(new Staff("s2", "Bob Chen", "store-1", "ASSOCIATE"));
-        save(new Staff("s3", "Carla Gomez", "store-2", "MANAGER"));
+        save(new Staff("s3", "Carla Gomez", "store-2", "STORE_MANAGER"));
     }
 
     private void save(Staff staff) {

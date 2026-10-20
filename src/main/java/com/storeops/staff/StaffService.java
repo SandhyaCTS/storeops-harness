@@ -1,6 +1,7 @@
 package com.storeops.staff;
 
 import java.util.List;
+import java.util.Optional;
 import org.springframework.stereotype.Service;
 
 /** Staff business logic (stub). */
@@ -21,5 +22,10 @@ public class StaffService implements StaffReader {
     @Override
     public List<Staff> listStaffByStore(String storeId) {
         return repository.findAll().stream().filter(s -> s.storeId().equals(storeId)).toList();
+    }
+
+    @Override
+    public Optional<Staff> findStaff(String id) {
+        return repository.findById(id);
     }
 }

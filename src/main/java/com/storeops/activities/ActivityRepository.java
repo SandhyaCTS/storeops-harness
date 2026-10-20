@@ -25,4 +25,8 @@ class ActivityRepository {
     Optional<Activity> findById(String id) {
         return Optional.ofNullable(store.get(id));
     }
+
+    void deleteById(String id) {
+        store.remove(id);
+    }
 }
