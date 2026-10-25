@@ -19,8 +19,8 @@ Spring Boot 3.3 / Java 17 REST API for retail store operations. In-memory stores
 
 Each module: `XController` (routes) -> `XService` -> `XRepository` (package-private, in-memory `ConcurrentHashMap`).
 
-## Endpoints (12)
-- `GET /api/activities` (filters `programmeId`, `status`), `GET /api/activities/{id}`, `POST /api/activities`, `PATCH /api/activities/{id}`, `DELETE /api/activities/{id}`
+## Endpoints (13)
+- `GET /api/activities` (filters `programmeId`, `status`), `GET /api/activities/{id}`, `POST /api/activities`, `PATCH /api/activities/{id}`, `DELETE /api/activities/{id}`, `POST /api/activities/bulk-status` (body `{activityIds, status}`)
 - `GET /api/programmes` (filter `storeId`), `POST /api/programmes`, `POST /api/programmes/{id}/members`
 - `GET /api/staff`
 - `GET /api/alerts`, `POST /api/alerts/{id}/acknowledge`
@@ -35,6 +35,7 @@ Each module: `XController` (routes) -> `XService` -> `XRepository` (package-priv
 
 ## Business rules already in the code
 - Delete an activity: allowed only if the `X-Staff-Id` header equals the activity's `ownerId`, or that staff member's role is `STORE_MANAGER`. Otherwise `ForbiddenError` (403, code `FORBIDDEN`). A missing header is forbidden.
+- Bulk status update: `X-Staff-Id` must be a `STORE_MANAGER` (else 403, checked before IDs). All-or-nothing: the first unknown ID gives 404 and nothing changes. Duplicate IDs count once. Activities already in the target status are unchanged and publish no event; each real change publishes one `ActivityUpdatedEvent`.
 - Add programme member: 404 if programme or staff unknown, 409 if the staff member is already a member.
 - Error body for every failure: `ErrorResponse(code, message, statusCode)`.
 
