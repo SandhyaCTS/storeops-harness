@@ -9,6 +9,7 @@ import com.storeops.common.event.EventBus;
 import com.storeops.staff.Staff;
 import com.storeops.staff.StaffReader;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -71,18 +72,24 @@ public class ActivityService implements ActivityReader {
         if (!isManager) {
             throw new ForbiddenError("Only a store manager can change activity statuses in bulk");
         }
-        List<Activity> current = request.activityIds().stream().map(this::get).toList();
-        List<Activity> updated = new ArrayList<>();
+        List<Activity> current = new ArrayList<>(new LinkedHashSet<>(request.activityIds())).stream()
+                .map(this::get).toList();
+        List<Activity> result = new ArrayList<>();
+        List<ActivityUpdatedEvent> changes = new ArrayList<>();
         for (Activity activity : current) {
-            updated.add(repository.save(new Activity(activity.id(), activity.storeId(), activity.programmeId(),
+            if (activity.status() == request.status()) {
+                result.add(activity);
+                continue;
+            }
+            Activity saved = repository.save(new Activity(activity.id(), activity.storeId(), activity.programmeId(),
                     activity.title(), request.status(), activity.priority(), activity.category(),
-                    activity.assigneeId(), activity.ownerId())));
+                    activity.assigneeId(), activity.ownerId()));
+            result.add(saved);
+            changes.add(new ActivityUpdatedEvent(saved.id(), saved.storeId(), activity.status().name(),
+                    request.status().name()));
         }
-        for (int i = 0; i < current.size(); i++) {
-            eventBus.publish(new ActivityUpdatedEvent(updated.get(i).id(), updated.get(i).storeId(),
-                    current.get(i).status().name(), request.status().name()));
-        }
-        return updated;
+        changes.forEach(eventBus::publish);
+        return result;
     }
 
     /** Deletes an activity; only its owner or a store manager may do so. */

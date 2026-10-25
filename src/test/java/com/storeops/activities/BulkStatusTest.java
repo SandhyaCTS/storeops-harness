@@ -9,10 +9,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.storeops.common.event.ActivityUpdatedEvent;
+import java.util.ArrayList;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
+import org.springframework.context.event.EventListener;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.event.ApplicationEvents;
 import org.springframework.test.context.event.RecordApplicationEvents;
@@ -23,6 +29,7 @@ import org.springframework.test.web.servlet.ResultActions;
 @SpringBootTest
 @AutoConfigureMockMvc
 @RecordApplicationEvents
+@Import(BulkStatusTest.Probe.class)
 class BulkStatusTest {
 
     private static final String URL = "/api/activities/bulk-status";
@@ -35,6 +42,42 @@ class BulkStatusTest {
 
     @Autowired
     private ApplicationEvents events;
+
+    @Autowired
+    private StatusProbe probe;
+
+    /** Records, at the moment each update event is observed, the status of the activity ids it watches. */
+    static class StatusProbe {
+        private final ActivityRepository repository;
+        private final List<String> watched = new ArrayList<>();
+        private final List<String> seen = new ArrayList<>();
+
+        StatusProbe(ActivityRepository repository) {
+            this.repository = repository;
+        }
+
+        @EventListener
+        void on(ActivityUpdatedEvent event) {
+            if (watched.contains(event.activityId())) {
+                seen.add(watched.stream().map(id -> repository.findById(id).orElseThrow().status().name())
+                        .toList().toString());
+            }
+        }
+    }
+
+    /** Registers the probe bean. */
+    @TestConfiguration
+    static class Probe {
+        @Bean
+        StatusProbe statusProbe(ActivityRepository repository) {
+            return new StatusProbe(repository);
+        }
+    }
+
+    private String activate(String id, String status) throws Exception {
+        bulk("s1", body("[\"" + id + "\"]", "\"" + status + "\"")).andExpect(status().isOk());
+        return id;
+    }
 
     private String create(String title) throws Exception {
         String body = mvc.perform(post("/api/activities").contentType(MediaType.APPLICATION_JSON)
@@ -154,5 +197,121 @@ class BulkStatusTest {
         bulk("s1", body("[\"" + a1 + "\"]", "null")).andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
         assertTodoAndNoEvents(a1);
+    }
+
+    private int count() {
+        return (int) events.stream(ActivityUpdatedEvent.class).count();
+    }
+
+    @Test
+    void duplicateIdsCountOnce() throws Exception {
+        String a1 = create("A1");
+        bulk("s1", body("[\"" + a1 + "\",\"" + a1 + "\",\"" + a1 + "\"]", "\"DONE\""))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].id").value(a1))
+                .andExpect(jsonPath("$[0].status").value("DONE"));
+        assertThat(fetch(a1).get("status").asText()).isEqualTo("DONE");
+        assertThat(events.stream(ActivityUpdatedEvent.class).toList())
+                .containsExactly(new ActivityUpdatedEvent(a1, "store-1", "TODO", "DONE"));
+    }
+
+    @Test
+    void duplicatesKeepFirstOccurrenceOrder() throws Exception {
+        String a1 = create("A1");
+        String a2 = create("A2");
+        bulk("s1", body("[\"" + a1 + "\",\"" + a2 + "\",\"" + a1 + "\"]", "\"DONE\""))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].id").value(a1))
+                .andExpect(jsonPath("$[1].id").value(a2));
+        assertThat(events.stream(ActivityUpdatedEvent.class).toList()).containsExactly(
+                new ActivityUpdatedEvent(a1, "store-1", "TODO", "DONE"),
+                new ActivityUpdatedEvent(a2, "store-1", "TODO", "DONE"));
+    }
+
+    @Test
+    void alreadyInTargetStatusIsUnchangedWithNoEvent() throws Exception {
+        String a3 = activate(create("A3"), "DONE");
+        int before = count();
+        JsonNode snapshot = fetch(a3);
+        bulk("s1", body("[\"" + a3 + "\"]", "\"DONE\""))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].id").value(a3))
+                .andExpect(jsonPath("$[0].status").value("DONE"));
+        assertThat(fetch(a3)).isEqualTo(snapshot);
+        assertThat(count()).isEqualTo(before);
+    }
+
+    @Test
+    void mixOfChangedAndAlreadyDoneEmitsOneEventForTheChangedOne() throws Exception {
+        String a1 = create("A1");
+        String a3 = activate(create("A3"), "DONE");
+        int before = count();
+        bulk("s1", body("[\"" + a1 + "\",\"" + a3 + "\"]", "\"DONE\""))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].id").value(a1))
+                .andExpect(jsonPath("$[0].status").value("DONE"))
+                .andExpect(jsonPath("$[1].id").value(a3))
+                .andExpect(jsonPath("$[1].status").value("DONE"));
+        assertThat(events.stream(ActivityUpdatedEvent.class).skip(before).toList())
+                .containsExactly(new ActivityUpdatedEvent(a1, "store-1", "TODO", "DONE"));
+    }
+
+    @Test
+    void doneToBlockedAndBlockedToTodoCarryPreviousAndNewStatus() throws Exception {
+        String a1 = activate(create("A1"), "DONE");
+        int before = count();
+        bulk("s1", body("[\"" + a1 + "\"]", "\"BLOCKED\"")).andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].status").value("BLOCKED"));
+        bulk("s1", body("[\"" + a1 + "\"]", "\"TODO\"")).andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].status").value("TODO"));
+        assertThat(fetch(a1).get("status").asText()).isEqualTo("TODO");
+        assertThat(events.stream(ActivityUpdatedEvent.class).skip(before).toList()).containsExactly(
+                new ActivityUpdatedEvent(a1, "store-1", "DONE", "BLOCKED"),
+                new ActivityUpdatedEvent(a1, "store-1", "BLOCKED", "TODO"));
+    }
+
+    @Test
+    void duplicatesWithUnknownIdAreNotFoundAndChangeNothing() throws Exception {
+        String a1 = create("A1");
+        bulk("s1", body("[\"" + a1 + "\",\"" + a1 + "\",\"missing\"]", "\"DONE\""))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("NOT_FOUND"))
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("missing")));
+        assertTodoAndNoEvents(a1);
+    }
+
+    @Test
+    void nonManagerWithDuplicatesIsForbiddenAndChangesNothing() throws Exception {
+        String a1 = create("A1");
+        bulk("s2", body("[\"" + a1 + "\",\"" + a1 + "\"]", "\"DONE\""))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"));
+        assertTodoAndNoEvents(a1);
+    }
+
+    @Test
+    void nonManagerWithUnknownIdIsForbiddenStatusesUnchangedNoEvent() throws Exception {
+        String a1 = create("A1");
+        bulk("s2", body("[\"" + a1 + "\",\"missing\"]", "\"DONE\""))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"));
+        assertTodoAndNoEvents(a1);
+    }
+
+    @Test
+    void eventsArePublishedOnlyAfterEveryActivityIsUpdated() throws Exception {
+        String a1 = create("A1");
+        String a2 = create("A2");
+        probe.watched.clear();
+        probe.seen.clear();
+        probe.watched.add(a1);
+        probe.watched.add(a2);
+        bulk("s1", body("[\"" + a1 + "\",\"" + a2 + "\"]", "\"DONE\"")).andExpect(status().isOk());
+        assertThat(probe.seen).containsExactly("[DONE, DONE]", "[DONE, DONE]");
+        probe.watched.clear();
     }
 }
