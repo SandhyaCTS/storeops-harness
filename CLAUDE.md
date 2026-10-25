@@ -48,7 +48,7 @@ The Evaluator's gates are the same Maven commands CI runs (`mvn -B verify`, whic
 `spec.md`, `sprint-N-contract.md`, `sprint-N-generator-summary.md`, `sprint-N-evaluator-feedback.md` (one `## Iteration K` section per attempt, never overwritten), `sprint-N-run-log.md`, and `.harness/output/escalation.md` on escalation. Commit these with the code.
 
 ## Protected files
-Only humans edit: `.harness/` (except files in `reviews/` and `output/`), `config/`, `src/test/java/com/storeops/architecture/ArchitectureRulesTest.java`, and the surefire/Mockito `argLine` in `pom.xml`. The Generator is forbidden to change them and the Evaluator fails any diff that does (A-G0).
+Only humans edit: `.harness/` (except files in `reviews/` and `output/`), `config/`, `src/test/java/com/storeops/architecture/ArchitectureRulesTest.java`, and the surefire/Mockito `argLine` and JaCoCo coverage thresholds in `pom.xml`. The Generator is forbidden to change them and the Evaluator fails any diff that does (A-G0).
 
 ## Skills
-`.harness/skills/`: `app-context`, `architecture-principles` (shared); `coding-conventions`, `how-to-test` (Generator); `how-to-review`, `grading-criteria` (Evaluator).
+`.harness/skills/`: `app-context`, `architecture-principles` (shared); `sprint-decomposition` (Planner); `coding-conventions`, `how-to-test` (Generator); `how-to-review`, `grading-criteria` (Evaluator).

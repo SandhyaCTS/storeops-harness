@@ -27,7 +27,8 @@ Checklist (judged by reading; 15 points each):
 
 ## Dimension B: Correctness and test quality (weight 40; misses can be carried forward)
 Hard gates:
-- B-G1 `mvn -B verify` exits 0 (Checkstyle 0 violations, all tests pass, SpotBugs 0 bugs).
+- B-G1 `mvn -B verify` exits 0 (Checkstyle 0 violations, all tests pass, SpotBugs 0 bugs, JaCoCo floors met; see B-G3).
+- B-G3 Coverage floors (JaCoCo `check`, part of `mvn -B verify`): Service classes 80% line, Controller classes 70%, `common.*` shared utilities 60%, overall 70%. A "Rule violated" line in the verify output = FAIL. Deterministic: the numbers come from the tool, not from the Evaluator.
 - B-G2 Every endpoint added or changed in the diff has at least one test asserting a business outcome beyond status code (body field, `$.code`, state via follow-up GET, or recorded event).
 
 Checklist (8 points each):

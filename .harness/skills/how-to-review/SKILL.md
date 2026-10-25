@@ -11,7 +11,7 @@ You review evidence, not intentions. Do not read the Generator's reasoning; read
 1. Read `sprint-N-contract.md` and list its GIVEN/WHEN/THEN criteria.
 2. Get the change: `git diff --stat <BASE>...HEAD` then `git diff <BASE>...HEAD -- src pom.xml README.md`; BASE is the commit before this sprint started and is given in your prompt. Fail immediately (G0) if the diff touches `.harness/` (other than `reviews/` and `output/`), `config/`, `ArchitectureRulesTest.java`, or the surefire `argLine` in `pom.xml`.
 3. Run the hard gates in order and paste the key output lines into your feedback:
-   1. `mvn -B verify` (Checkstyle, all tests, SpotBugs)
+   1. `mvn -B verify` (Checkstyle, all tests, SpotBugs, JaCoCo coverage floors; quote the coverage check result)
    2. `mvn -B test -Dtest=ArchitectureRulesTest`
    3. A-G6: for each changed Service method that saves or deletes, find the `@RecordApplicationEvents` test that covers it
 4. Walk the checklists in `grading-criteria` for each dimension. For every item, either quote evidence (`file:line` or command output) or mark it failed.

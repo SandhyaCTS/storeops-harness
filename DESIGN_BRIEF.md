@@ -31,17 +31,20 @@ The full contract has 13 criteria; each maps to a test, and the Evaluator checks
 
 ## B. Governance
 
-**Skill file strategy.** Six skills, each StoreOps-specific and read only by the agents that need it:
+**Skill file strategy.** Seven skills, each StoreOps-specific and read only by the agents that need it:
 | Skill | Read by | Why it exists |
 |---|---|---|
+| `sprint-decomposition` | Planner | Sizing (one endpoint or rule per sprint), ordering by risk, GIVEN/WHEN/THEN rules, and the rule that no rubric item (README row, outcome test, event test) is deferred to a later sprint |
 | `app-context` | all | The 5 modules, 13 endpoints, seeded staff, enums, the delete rule, the event flow |
 | `architecture-principles` | all | Rules G1–G5, each with a StoreOps violation and fix |
 | `coding-conventions`, `how-to-test` | Generator | Package-private constructors, records, enums not strings; tests assert outcomes and error codes, plus an event test for every state change |
 | `how-to-review`, `grading-criteria` | Evaluator | The procedure, the commands, the finding format, the dimensions, gates and verdict rules |
 
-The Generator deliberately does not read `grading-criteria` or `how-to-review`: it builds to the contract and the conventions, not to the grader. Six is the minimum the brief asks for; I did not add more because every extra skill is another place for rules to drift apart (calibration found one such drift, below).
+The Generator deliberately does not read `grading-criteria` or `how-to-review`: it builds to the contract and the conventions, not to the grader. The seventh was added after the demonstration run, when the sprint 1 README miss showed the Planner needed its own sizing rules. Six is the minimum the brief asks for; I did not add more because every extra skill is another place for rules to drift apart (calibration found one such drift, below).
 
-**Protected files.** `.harness/` (except `reviews/` and `output/`), `config/`, `ArchitectureRulesTest.java` and the surefire/Mockito `argLine` in `pom.xml` can only be changed by a human. Gate A-G0 fails any diff touching them. Without it, the cheapest way for a Generator to get green is to loosen the gate; calibration scenario S3 (`LineLength` raised to 200) confirmed the Evaluator catches this and also notes that the green build ran against the loosened config.
+**Protected files.** `.harness/` (except `reviews/` and `output/`), `config/`, `ArchitectureRulesTest.java`, the surefire/Mockito `argLine` and the JaCoCo coverage thresholds in `pom.xml` can only be changed by a human. Gate A-G0 fails any diff touching them. Without it, the cheapest way for a Generator to get green is to loosen the gate; calibration scenario S3 (`LineLength` raised to 200) confirmed the Evaluator catches this and also notes that the green build ran against the loosened config.
+
+**Relationship to CI.** The Evaluator's automated gates are the same Maven commands CI runs (`mvn -B verify`, which includes `ArchitectureRulesTest` and the coverage check), so the harness *feeds* CI and does not replace it. A sprint that passes the Evaluator should pass CI with the same result; `.github/workflows/ci.yml` stays as the independent backstop on every push to `main` and every pull request. The Evaluator adds only what CI cannot: contract coverage, event-test coverage (A-G6) and the reading-based checklist. Harness files live in `.harness/`, CI configuration in `.github/`, so changing one never touches the other.
 
 **Audit trail.** Everything an agent decides is a file in `.harness/reviews/`, committed alongside the code: `spec.md`, `sprint-N-contract.md`, `sprint-N-generator-summary.md`, `sprint-N-evaluator-feedback.md` (one `## Iteration K` section per attempt, never overwritten), `sprint-N-run-log.md` (verdict, iterations, escalation flag, token estimate and its method) and, on escalation, `.harness/output/escalation.md`. Each iteration is its own commit (`sprint N iter K: ...`). A reviewer can replay a sprint from `git log` and read why each verdict was given, with `file:line` evidence.
 
@@ -65,7 +68,8 @@ Architecture carries more because a boundary, error-contract or event-bus violat
 | A-G2 | `g2OnlyAppErrorsAreConstructed` | Checkstyle's `IllegalThrows` only checks `throws` clauses, so it misses `throw new RuntimeException`; this is the only real check |
 | A-G3, G4, G5 | `g3…`, `g4…`, `g5…` | Same: structural facts, not opinions |
 | A-G6 | every state-changing endpoint has an event test | The one thing no static tool can see |
-| B-G1 | `mvn -B verify` exits 0 (Checkstyle 0, all tests, SpotBugs 0) | A red build is a red build |
+| B-G1 | `mvn -B verify` exits 0 (Checkstyle 0, all tests, SpotBugs 0; JaCoCo floors are separate gate B-G3) | A red build is a red build |
+| B-G3 | JaCoCo `check` inside `mvn -B verify`: Service classes 80% line, Controller classes 70%, `common.*` 60%, overall 70% | Untested branches are how HTTP-only tests hide; the number comes from the tool, so the Evaluator cannot be lenient about it |
 | B-G2 | each changed endpoint has a test asserting a business outcome beyond status code | Kills the "HTTP-only tests" failure mode |
 
 **Verdict rules (in order).** Any failed gate is FAIL. Any definite miss on A1–A4 is FAIL. Score 100 is PASS. Score 84–99 is CONDITIONAL PASS. Below 84 is FAIL. 84 is 100 minus two correctness items, so a third correctness miss (76) or two undecidable architecture items (70) fails the sprint.
@@ -98,7 +102,14 @@ Architecture carries more because a boundary, error-contract or event-bus violat
 - *Why:* (a) lets a high score offset a boundary violation. (b) is not reproducible and cannot be audited. The hybrid keeps the objective things objective and spends the LLM's judgement only on checklist items that no tool can check, each of which must cite evidence.
 - *Assumption:* the checklist items are few and concrete enough that two Evaluator runs would agree. The weights (60/40) and the 84 threshold are my judgement, not derived; the consequence they encode is "an architecture miss is a failed sprint, up to two missed tests are not".
 
+**D4. All-or-nothing bulk update instead of partial success.**
+- *Chosen:* `POST /api/activities/bulk-status` validates every ID first; one unknown ID returns 404 and nothing changes, no event is published.
+- *Alternatives:* (a) the brief's suggested partial-failure `PATCH` that updates the valid IDs and reports the rest; (b) best effort with a per-ID result list.
+- *Why:* with the event bus, partial success means some `ActivityUpdatedEvent`s fire for a request that also returned an error, and listeners cannot tell whether the batch finished. All-or-nothing keeps "no event on rejection" a single testable rule (A-G6) and keeps each GIVEN/WHEN/THEN criterion binary. `POST` was chosen because the body is a command over a list, not a partial update of one resource.
+- *Assumption:* store managers run batches small enough that rejecting the whole request is acceptable. If partial results are needed later, the contract must define per-ID outcomes and event ordering first.
+
 ## Known limits
+- The coverage gate (B-G3) was added after the calibration runs and has not been exercised by a seeded defect; it is verified only by `mvn -B verify` passing today.
 - A-G6 and checklist items A1–A4 rest on the Evaluator reading code; they are the weakest part of the design.
 - G5 exempts records (plain data such as `Staff`) from "call only `*Reader` methods".
 - Token figures in the run-logs come from reported subagent usage; the Planner's and the Monitor's own usage are not allocated to sprints.

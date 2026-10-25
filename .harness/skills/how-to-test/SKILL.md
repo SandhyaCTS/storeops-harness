@@ -26,6 +26,9 @@ A status-code assertion alone is not a test of a business rule. Every GIVEN/WHEN
 - Seed data you can rely on: staff `s1` (STORE_MANAGER, store-1), `s2` (ASSOCIATE, store-1), `s3` (STORE_MANAGER, store-2). Activities and programmes are created by the test; stores are in-memory and shared across tests in the same Spring context, so filter or use unique values rather than assuming an empty list.
 - When you change a domain value, grep tests for the old value.
 
+## Coverage floors (enforced by `mvn -B verify`, JaCoCo)
+Service classes 80% line, Controller classes 70%, `com.storeops.common.*` 60%, overall 70%. Report: `target/site/jacoco/index.html`. If `verify` fails with "Rule violated", add tests for the uncovered branches; do not lower the thresholds in `pom.xml`.
+
 ## Do not
 - Use `@MockBean` to bypass a rule under test.
 - Weaken or delete an existing assertion to get green.

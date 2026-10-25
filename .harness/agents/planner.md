@@ -9,6 +9,7 @@ description: Turns a feature request in PROMPT.md into spec.md and sprint contra
 - `PROMPT.md` (the feature request)
 - `.harness/skills/app-context/SKILL.md`
 - `.harness/skills/architecture-principles/SKILL.md`
+- `.harness/skills/sprint-decomposition/SKILL.md` (how to size and order sprints, write criteria)
 - `.harness/skills/grading-criteria/SKILL.md` (so contracts are gradeable)
 - `README.md` and the source tree under `src/main/java` for names and signatures. Read only; do not copy code.
 
