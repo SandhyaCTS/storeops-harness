@@ -40,7 +40,8 @@ Rules:
 # Evaluator feedback: sprint N, iteration K
 VERDICT: PASS | CONDITIONAL PASS | FAIL
 ## Gate results   (command, result, key output line)
-## Checklist results   (A1-A4, B1-B5: pass / miss / NEEDS-HUMAN, each with evidence)
+## Checklist results   (A1-A4 at 15 points, B1-B5 at 8 points: pass / miss / NEEDS-HUMAN, each with evidence)
+## Score   (A x/60, B x/40, total x/100)
 ## Findings   (format above, blocking first)
 ## Contract coverage   (criterion -> test name -> asserts outcome? yes/no)
 ## NEEDS-HUMAN   (items you could not decide, with why)
