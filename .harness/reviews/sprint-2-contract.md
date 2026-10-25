@@ -30,7 +30,11 @@ README
 `ActivityUpdatedEvent(activityId, storeId, previousStatus, newStatus)` once per activity whose status really changes, none for no-ops or rejections, all published after every change has succeeded.
 
 ## Mandatory fixes carried forward
-(Filled in by the orchestrator from sprint 1 evaluator findings, if any.)
+From sprint 1 evaluator feedback (CONDITIONAL PASS, 84/100). These are mandatory:
+- B4: the README endpoint table has no row for `POST /api/activities/bulk-status` (covered by README criterion 9 above).
+- B3: no duplicate-ID test exists (covered by criteria 1, 2 and 6 above).
+- Sprint 1 test gap: the criterion 7 test (non-manager with an unknown activity ID) must also assert statuses are unchanged and no event is recorded.
+- Sprint 1 test gap: add a test that events are published only after all updates succeed (for example, assert both activities are already DONE when the first event is observed, or that a rejected batch publishes none).
 
 ## Out of scope
 Anything outside the `activities` module (other than the README row), other bulk fields, bulk delete, alert listeners, pagination.
