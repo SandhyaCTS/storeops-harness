@@ -8,6 +8,7 @@ import com.storeops.common.event.ActivityUpdatedEvent;
 import com.storeops.common.event.EventBus;
 import com.storeops.staff.Staff;
 import com.storeops.staff.StaffReader;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -60,6 +61,27 @@ public class ActivityService implements ActivityReader {
                 current.ownerId()));
         eventBus.publish(new ActivityUpdatedEvent(updated.id(), updated.storeId(), current.status().name(),
                 updated.status().name()));
+        return updated;
+    }
+
+    /** Sets one status on many activities; store managers only, all-or-nothing, events after all updates. */
+    public List<Activity> bulkStatus(BulkStatusRequest request, String requesterId) {
+        boolean isManager = requesterId != null && staff.findStaff(requesterId)
+                .map(Staff::role).filter(STORE_MANAGER::equals).isPresent();
+        if (!isManager) {
+            throw new ForbiddenError("Only a store manager can change activity statuses in bulk");
+        }
+        List<Activity> current = request.activityIds().stream().map(this::get).toList();
+        List<Activity> updated = new ArrayList<>();
+        for (Activity activity : current) {
+            updated.add(repository.save(new Activity(activity.id(), activity.storeId(), activity.programmeId(),
+                    activity.title(), request.status(), activity.priority(), activity.category(),
+                    activity.assigneeId(), activity.ownerId())));
+        }
+        for (int i = 0; i < current.size(); i++) {
+            eventBus.publish(new ActivityUpdatedEvent(updated.get(i).id(), updated.get(i).storeId(),
+                    current.get(i).status().name(), request.status().name()));
+        }
         return updated;
     }
 

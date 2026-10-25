@@ -48,6 +48,12 @@ public class ActivityController {
         return service.update(id, request);
     }
 
+    @PostMapping("/bulk-status")
+    public List<Activity> bulkStatus(@Valid @RequestBody BulkStatusRequest request,
+            @RequestHeader(value = "X-Staff-Id", required = false) String staffId) {
+        return service.bulkStatus(request, staffId);
+    }
+
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable String id,
