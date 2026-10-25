@@ -20,6 +20,7 @@ services/controllers throw only `AppError` subclasses (`common.error`), enforced
 | GET | `/api/activities/{id}` | |
 | POST | `/api/activities` | Publishes `ActivityCreatedEvent` |
 | PATCH | `/api/activities/{id}` | Partial update; null fields unchanged |
+| POST | `/api/activities/bulk-status` | `X-Staff-Id` header; `STORE_MANAGER` only, else 403. All-or-nothing (404 unknown id, 400 invalid body). Duplicate ids count once; activities already in the target status are unchanged. Publishes `ActivityUpdatedEvent` per changed activity |
 | DELETE | `/api/activities/{id}` | `X-Staff-Id` header; owner or `STORE_MANAGER` only, else 403 |
 | GET | `/api/programmes` | Optional filter: `storeId` |
 | POST | `/api/programmes` | |
