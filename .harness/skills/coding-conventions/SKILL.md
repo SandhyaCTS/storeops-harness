@@ -23,7 +23,7 @@ description: StoreOps code style and the checklist for adding an endpoint or mod
 1. Controller method (thin) -> Service method -> Repository method if needed.
 2. Service publishes a `DomainEvent` via `EventBus` if it changes state.
 3. Tests per `how-to-test`.
-4. New row in the README endpoint table and in `app-context` if the endpoint list changes.
+4. New row in the README endpoint table. Do not edit `app-context`; it is protected, and a human updates it after the run.
 
 ## Adding cross-module access
 Add a method to the owning module's `*Reader` interface and implement it in that Service. Do not make a Repository public.

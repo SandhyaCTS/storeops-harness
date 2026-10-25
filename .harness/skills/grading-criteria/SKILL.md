@@ -34,7 +34,7 @@ Checklist:
 - B1 Each GIVEN/WHEN/THEN in the sprint contract maps to a named test that asserts its outcome.
 - B2 Every error code the new code can throw has a test, and the test asserts nothing changed.
 - B3 Edge cases covered: unknown id, null or empty optional fields, duplicates.
-- B4 README endpoint table and `app-context` updated for any new or changed endpoint.
+- B4 README endpoint table updated for any new or changed endpoint. (`app-context` is protected and updated by a human after the run.)
 - B5 Domain values use enums; no new string literals for status, priority, category or role.
 
 ## Verdict (apply in order)
