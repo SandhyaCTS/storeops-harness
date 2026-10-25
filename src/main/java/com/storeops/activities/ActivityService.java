@@ -3,6 +3,8 @@ package com.storeops.activities;
 import com.storeops.common.error.ForbiddenError;
 import com.storeops.common.error.NotFoundError;
 import com.storeops.common.event.ActivityCreatedEvent;
+import com.storeops.common.event.ActivityDeletedEvent;
+import com.storeops.common.event.ActivityUpdatedEvent;
 import com.storeops.common.event.EventBus;
 import com.storeops.staff.Staff;
 import com.storeops.staff.StaffReader;
@@ -49,13 +51,16 @@ public class ActivityService implements ActivityReader {
 
     public Activity update(String id, UpdateActivityRequest request) {
         Activity current = get(id);
-        return repository.save(new Activity(current.id(), current.storeId(), current.programmeId(),
+        Activity updated = repository.save(new Activity(current.id(), current.storeId(), current.programmeId(),
                 current.title(),
                 request.status() != null ? request.status() : current.status(),
                 request.priority() != null ? request.priority() : current.priority(),
                 request.category() != null ? request.category() : current.category(),
                 request.assigneeId() != null ? request.assigneeId() : current.assigneeId(),
                 current.ownerId()));
+        eventBus.publish(new ActivityUpdatedEvent(updated.id(), updated.storeId(), current.status().name(),
+                updated.status().name()));
+        return updated;
     }
 
     /** Deletes an activity; only its owner or a store manager may do so. */
@@ -68,6 +73,7 @@ public class ActivityService implements ActivityReader {
             throw new ForbiddenError("Only the owner or a store manager can delete activity " + id);
         }
         repository.deleteById(id);
+        eventBus.publish(new ActivityDeletedEvent(activity.id(), activity.storeId()));
     }
 
     @Override
