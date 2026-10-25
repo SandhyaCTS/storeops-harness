@@ -33,9 +33,9 @@ curl -s -i -X POST localhost:8080/api/activities/bulk-status -H "$H" -H 'X-Staff
 Expected: 1 returns `200` with both activities as `DONE`; 2 returns `403` with `"code":"FORBIDDEN"`; 3 returns `404` with `"code":"NOT_FOUND"` naming `ghost`, and `<id1>` is still `DONE` afterwards.
 
 ## Evidence
-> Not yet captured. Run the commands above against the running container and paste the real output (or a screenshot) here. Do not edit it by hand.
 
 Date run: 25th October 2026  Image id (`docker images storeops-api`): Image:storeops-api:latest   ID: 1a9abe8e1a96 
+<img width="975" height="509" alt="image" src="https://github.com/user-attachments/assets/18902206-6d74-47fa-8436-0ccf33b74334" />
 
 ```
 $ H='Content-Type: application/json'
