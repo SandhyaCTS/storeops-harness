@@ -42,7 +42,7 @@ If a verdict line is missing or not one of the three values, treat it as FAIL wi
 Every agent is a new subagent with no shared conversation. Each reads only the files its agent file lists, and communicates only by writing files in `.harness/reviews/`. The orchestrator passes only: sprint number, iteration number, `BASE`, and the agent file path. Never paste one agent's reasoning into another's prompt. The Evaluator never sees the Generator's chat, only its summary and the committed diff.
 
 ## Evaluator and CI
-The Evaluator's gates are the same Maven commands CI runs (`mvn -B verify`, which includes `ArchitectureRulesTest`). The Evaluator runs them first and **feeds** CI: a sprint that passes the Evaluator should pass CI with the same result, and CI stays as the independent backstop on `main`. The Evaluator adds what CI cannot: contract coverage, event-test coverage (A-G6), and the reading-based checklist.
+The Evaluator's gates are the same Maven commands CI runs (`mvn -B verify`, which includes `ArchitectureRulesTest`). The Evaluator runs them first and **feeds** CI: a sprint that passes the Evaluator should pass CI with the same result, and CI (`.github/workflows/ci.yml`, which runs `mvn -B verify` on every push to `main` and every pull request) stays as the independent backstop. The Evaluator adds what CI cannot: contract coverage, event-test coverage (A-G6), and the reading-based checklist.
 
 ## Artefacts (all in `.harness/reviews/` unless noted)
 `spec.md`, `sprint-N-contract.md`, `sprint-N-generator-summary.md`, `sprint-N-evaluator-feedback.md` (one `## Iteration K` section per attempt, never overwritten), `sprint-N-run-log.md`, and `.harness/output/escalation.md` on escalation. Commit these with the code.
