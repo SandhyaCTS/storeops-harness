@@ -35,10 +35,49 @@ Expected: 1 returns `200` with both activities as `DONE`; 2 returns `403` with `
 ## Evidence
 > Not yet captured. Run the commands above against the running container and paste the real output (or a screenshot) here. Do not edit it by hand.
 
-Date run: _____  Image id (`docker images storeops-api`): _____
+Date run: 25th October 2026  Image id (`docker images storeops-api`): Image:storeops-api:latest   ID: 1a9abe8e1a96 
 
 ```
-(paste curl output here)
+$ H='Content-Type: application/json'
+# create two activities, note their ids
+curl -s -X POST localhost:8080/api/activities -H "$H" -d '{"storeId":"store-1","title":"Restock aisle 3"}'
+$ $ {"id":"ca137179-36be-4c9a-92b1-c60cb1c1c450","storeId":"store-1","programmeId":null,"title":"Restock aisle 3","status":"TODO","priority":"MEDIUM","category":"GENERAL","assigneeId":null,"ownerId":null}$ 
+$ 
+$ curl -s -X POST localhost:8080/api/activities -H "$H" -d '{"storeId":"store-1","title":"Audit freezers"}'
+
+{"id":"1f077f4a-b5a7-419d-b375-b3216c30e32d","storeId":"store-1","programmeId":null,"title":"Audit freezers","status":"TODO","priority":"MEDIUM","category":"GENERAL","assigneeId":null,"ownerId":null}$ $
+
+
+$ # 1. manager succeeds (duplicates count once)
+curl -s -i -X POST localhost:8080/api/activities/bulk-status -H "$H" -H 'X-Staff-Id: s1' \
+  -d '{"activityIds":["ca137179-36be-4c9a-92b1-c60cb1c1c450","1f077f4a-b5a7-419d-b375-b3216c30e32d","ca137179-36b$ e-4c9a-92b1-c60cb1c1c450"],"status":"DONE"}'
+> HTTP/1.1 200 
+Content-Type: application/json
+Transfer-Encoding: chunked
+Date: Sun, 25 Oct 2026 14:52:48 GMT
+
+[{"id":"ca137179-36be-4c9a-92b1-c60cb1c1c450","storeId":"store-1","programmeId":null,"title":"Restock aisle 3","status":"DONE","priority":"MEDIUM","category":"GENERAL","assigneeId":null,"ownerId":null},{"id":"1f077f4a-b5a7-419d-b375-b3216c30e32d","storeId":"store-1","programmeId":null,"title":"Audit freezers","status":"DONE","priority":"MEDIUM","category":"GENERAL","assigneeId":null,"ownerId":null}]$
+
+$ # 2. non-manager is refused
+curl -s -i -X POST localhost:8080/api/activities/bulk-status -H "$H" -H 'X-Staff-Id: s2' \
+  -d '{"activityIds":["ca137179-36be-4c9a-92b1-c60cb1c1c450"],"status":"TODO"}'
+$ > HTTP/1.1 403 
+Content-Type: application/json
+Transfer-Encoding: chunked
+Date: Sun, 25 Oct 2026 14:54:19 GMT
+
+{"code":"FORBIDDEN","message":"Only a store manager can change activity statuses in bulk","statusCode":403}$
+
+$ # 3. one unknown id rejects the whole batch
+curl -s -i -X POST localhost:8080/api/activities/bulk-status -H "$H" -H 'X-Staff-Id: s1' \
+  -d '{"activityIds":["ca137179-36be-4c9a-92b1-c60cb1c1c450","ghost"],"status":"TODO"}'
+$ > HTTP/1.1 404 
+Content-Type: application/json
+Transfer-Encoding: chunked
+Date: Sun, 25 Oct 2026 14:56:26 GMT
+
+{"code":"NOT_FOUND","message":"Activity not found: ghost","statusCode":404}$
+
 ```
 
 ## Not done
