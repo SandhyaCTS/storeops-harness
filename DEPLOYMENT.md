@@ -35,7 +35,7 @@ Expected: 1 returns `200` with both activities as `DONE`; 2 returns `403` with `
 ## Evidence
 
 Date run: 25th October 2026  Image id (`docker images storeops-api`): Image:storeops-api:latest   ID: 1a9abe8e1a96 
-<img width="975" height="509" alt="image" src="https://github.com/user-attachments/assets/18902206-6d74-47fa-8436-0ccf33b74334" />
+![Docker Desktop Exec tab: curl checks against the running storeops-api container](docs/deployment-evidence.png)
 
 ```
 $ H='Content-Type: application/json'
